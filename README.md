@@ -1,74 +1,130 @@
-# 🧹 **Clean Slate — Remove Manual Resources**
+# 🛠️ **Install Terraform**
 
-Before introducing Terraform to manage your entire AWS infrastructure, it is essential to remove all previously created manual resources.
-This ensures Terraform begins with a completely clean state, preventing conflicts, duplication, or infrastructure drift.
+This branch focuses on installing Terraform correctly across macOS, Linux, and Windows, following the updated (2025) HashiCorp licensing and distribution changes.
 
-Follow the steps below to fully reset your AWS environment.
+Follow the appropriate set of instructions below for your operating system, then verify the installation.
 
-## Step 1: Delete the Lambda Function
+## macOS (Homebrew Installation)
 
-1. Sign in to AWS Console as your IAM user: `aiengineer`
-2. Navigate to **Lambda**
-3. Select the function named `twin-api`
-4. Click **Actions** → **Delete**
-5. Type `delete` to confirm
-6. Click **Delete**
+The easiest and most reliable way to install Terraform on macOS is via Homebrew:
 
-This removes your manually deployed backend compute resource.
+```bash
+brew tap hashicorp/tap
+brew install hashicorp/tap/terraform
+```
 
-## Step 2: Delete API Gateway
+This installs the official HashiCorp-managed version and keeps it updated through the standard brew workflow.
 
-1. Go to **API Gateway** in the AWS Console
-2. Select the API called `twin-api-gateway`
-3. Click **Actions** → **Delete**
-4. Type the API name to confirm
-5. Click **Delete**
+## macOS / Linux (Manual Installation)
 
-This clears out your manual API routing layer.
+If you prefer manual installation or you're on a Linux distribution:
 
-## Step 3: Empty and Delete S3 Buckets
+1. Visit the official install page:
+   [https://developer.hashicorp.com/terraform/install](https://developer.hashicorp.com/terraform/install)
 
-### Memory Bucket
+2. Download the correct package for your system.
 
-1. Navigate to **S3**
-2. Open your memory bucket (e.g., `twin-memory-xyz`)
-3. Click **Empty**
-4. Type `permanently delete` to confirm
-5. Click **Empty**
-6. Once empty, click **Delete**
-7. Type the bucket name to confirm
-8. Click **Delete bucket**
+3. Extract the archive and move the binary into your PATH.
 
-### Frontend Bucket
+Example for macOS (adjust the URL for your OS and architecture):
 
-1. Navigate to your frontend bucket (e.g., `twin-frontend-xyz`)
-2. Repeat the **empty** → **delete** process from above
+```bash
+curl -O https://releases.hashicorp.com/terraform/1.10.0/terraform_1.10.0_darwin_amd64.zip
+unzip terraform_1.10.0_darwin_amd64.zip
+sudo mv terraform /usr/local/bin/
+```
 
-Both buckets must be fully removed so Terraform can recreate them reliably.
+After moving the binary, Terraform becomes globally accessible.
 
-## Step 4: Delete CloudFront Distribution
+## Windows Installation
 
-1. Navigate to **CloudFront**
-2. Select your distribution
-3. Click **Disable**
-4. Wait until the status updates to **Deployed** (typically 5–10 minutes)
-5. Once disabled, click **Delete**
-6. Confirm deletion
+1. Visit the official install page:
+   [https://developer.hashicorp.com/terraform/install](https://developer.hashicorp.com/terraform/install)
 
-CloudFront distributions must be disabled before they can be removed.
+2. Download the Windows package (`terraform_x.x.x_windows_amd64.zip`)
 
-## Step 5: Verify a Clean State
+3. Extract the archive — inside you will find **terraform.exe**
 
-Ensure the following:
+4. Move `terraform.exe` to a permanent folder, for example:
 
-* Lambda → no `twin-api` function exists
-* API Gateway → no `twin-api-gateway` API exists
-* S3 → no buckets beginning with `twin-` remain
-* CloudFront → no distributions related to your Digital Twin exist
+```
+C:\Program Files\Terraform\
+```
 
-A fully empty state ensures Terraform can provision every resource cleanly and consistently.
+5. Add this folder to your PATH:
 
-## Checkpoint
+   * Right-click **This PC**
+   * **Properties**
+   * **Advanced system settings**
+   * **Environment Variables**
+   * Under **System variables**, edit **Path**
+   * Add the folder:
 
-Your AWS account is now clean.
-Terraform will build **all** resources from this point forward — backend, frontend, memory storage, networking, and infrastructure.
+```
+C:\Program Files\Terraform\
+```
+
+6. Save and open a new PowerShell window.
+
+Terraform does not have a graphical interface — you will not see a program window when you double-click it. It only works through the terminal.
+
+## Verify Installation
+
+After installation, open a **new terminal session** and run:
+
+```bash
+terraform --version
+```
+
+A correct installation will show something like:
+
+```
+Terraform v1.14.0
+```
+
+(Versions will vary depending on what you installed.)
+
+## Update Your `.gitignore`
+
+Add Terraform-related ignore entries to prevent local state files, lock files, and sensitive information from being committed:
+
+```gitignore
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate.d/
+*.tfvars
+!terraform.tfvars
+!prod.tfvars
+
+# Lambda packages
+lambda-deployment.zip
+lambda-package/
+
+# Environment files
+.env
+.env.*
+
+# Node
+node_modules/
+out/
+.next/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+uv.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+```
+
+## Completed Step
+
+You now have Terraform correctly installed and configured, with your project ready to initialise its first infrastructure build.
