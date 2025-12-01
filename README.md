@@ -1,236 +1,228 @@
-# 🗑️ Destroy Infrastructure
+# 🏗️ **LLMOps Digital Twin — Infrastructure Automation (Terraform Edition)**
 
-This branch introduces automated scripts for safely destroying Terraform-managed environments. Since AWS requires S3 buckets to be emptied before deletion, these scripts handle bucket cleanup and full teardown of all associated resources across both Mac/Linux and Windows systems.
+The **LLMOps Digital Twin — Terraform Automation Project** extends the original Digital Twin system by introducing a **fully automated, infrastructure-as-code workflow** for provisioning and managing the entire AWS architecture.
 
-The result is a **clean, repeatable, and safe destruction workflow** for dev, test, and prod environments.
+Instead of manually configuring Lambda, API Gateway, S3, and CloudFront, this project enables:
 
-## Overview
+* **One-command deployment** of all AWS resources
+* **Workspace-based multi-environment support** (dev, test, prod)
+* **Automated S3 bucket creation, IAM roles, CloudFront distribution, and API Gateway**
+* **Consistent, repeatable, error-free deployments**
+* **Automated frontend + backend deployment pipeline**
+* **Full environment teardown via destroy scripts**
 
-You created two destruction scripts:
+The result is a robust, professional-grade Terraform-based workflow suitable for real LLMOps production systems.
 
-* `destroy.sh` for macOS and Linux
-* `destroy.ps1` for Windows PowerShell
+## 🎥 **Digital Twin Demo**
 
-Both scripts:
+<div align="center">
+  <img src="img/demo/twin_demo.gif" width="100%" alt="Digital Twin Demo">
+</div>
 
-1. Validate the requested environment
-2. Select the correct Terraform workspace
-3. Automatically empty the S3 buckets
-4. Run `terraform destroy`
-5. Provide instructions for optional workspace removal
+The Terraform project manages all AWS infrastructure required to run this Digital Twin end-to-end.
 
-This ensures no leftover resources remain in AWS.
+## 🧩 **Grouped Stages**
 
-## Steps Completed in This Branch
+This Terraform extension consists of **six stages**, grouped to reflect the natural lifecycle of IaC-driven AWS deployment:
 
-### Step 1: Create Destroy Script for Mac/Linux
+| Stage Group | Category                | Description                                                                                        |
+| :---------: | ----------------------- | -------------------------------------------------------------------------------------------------- |
+|    **00**   | Clean Slate             | Removal of all manually created AWS resources to ensure Terraform has full ownership               |
+|    **01**   | Terraform Installation  | Installing Terraform on macOS, Linux, or Windows; configuring PATH; verifying installation         |
+|    **02**   | Terraform Configuration | Creating versions, variables, main infrastructure files, and output definitions                    |
+|    **03**   | Deployment Scripts      | Shell + PowerShell automation for packaging Lambda, applying Terraform, and deploying the frontend |
+|    **04**   | Deploy Dev Environment  | Terraform init, workspace creation, full end-to-end deployment of the development environment      |
+|    **05**   | Destroy Infrastructure  | Automatic teardown scripts for safely removing all resources and emptying S3 buckets               |
 
-You added `scripts/destroy.sh`:
+This workflow provides the complete lifecycle:
+**clean state → automated provisioning → deployment → teardown**.
+
+## 🗂️ **Project Structure**
+
+```
+LLMOps-Digital-Twin__Terraform/
+├── backend/
+│   ├── server.py
+│   ├── lambda_handler.py
+│   ├── context.py
+│   ├── resources.py
+│   ├── deploy.py
+│   ├── data/
+│   ├── requirements.txt
+│   └── README.md
+├── frontend/
+│   ├── app/
+│   ├── components/
+│   ├── public/
+│   ├── out/
+│   ├── package.json
+│   └── README.md
+├── terraform/
+│   ├── versions.tf
+│   ├── variables.tf
+│   ├── main.tf
+│   ├── outputs.tf
+│   ├── terraform.tfvars
+│   └── prod.tfvars (optional)
+├── scripts/
+│   ├── deploy.sh
+│   ├── deploy.ps1
+│   ├── destroy.sh
+│   └── destroy.ps1
+├── img/
+│   └── demo/
+│       └── twin_demo.gif
+├── .gitignore
+└── README.md
+```
+
+## 🧠 **Core Components of the Terraform System**
+
+### 🧱 Terraform Configuration (versions.tf, variables.tf, main.tf)
+
+Terraform provisions:
+
+* AWS Lambda (Python 3.12)
+
+* API Gateway (HTTP API)
+
+* CloudFront distribution
+
+* S3 frontend bucket (static site hosting)
+
+* S3 memory bucket (Digital Twin conversation memory)
+
+* IAM roles + permissions for:
+
+  * Lambda execution
+  * S3 access
+  * Bedrock access
+
+* Optional custom domain (ACM + Route 53)
+
+All resources are tagged, environment-scoped, and fully modular.
+
+### 🧩 Variable System (`variables.tf` & `terraform.tfvars`)
+
+The variable files enable consistent parameterisation:
+
+* project name
+* environment (dev/test/prod)
+* Bedrock model ID
+* Lambda timeout
+* API throttle limits
+* Optional custom domain
+
+Workspaces keep environments isolated and safe.
+
+### 🧪 Deployment Scripts (`deploy.sh`, `deploy.ps1`)
+
+The scripts:
+
+1. Build the Lambda package
+2. Initialise or select Terraform workspace
+3. Apply Terraform with correct vars
+4. Retrieve CloudFront + API Gateway URLs
+5. Build and upload the frontend to S3
+6. Produce a clean summary output
+
+These scripts provide **true one-command deployment**.
+
+### 🔥 Destroy Scripts (`destroy.sh`, `destroy.ps1`)
+
+The teardown scripts:
+
+* Automatically empty S3 buckets
+* Destroy resources with Terraform
+* Keep workspaces (optional to delete)
+* Provide clean output of what was removed
+
+This guarantees cost control and prevents AWS resource drift.
+
+## 💻 **Local Development**
+
+Backend:
 
 ```bash
-#!/bin/bash
-set -e
-
-# Check if environment parameter is provided
-if [ $# -eq 0 ]; then
-    echo "❌ Error: Environment parameter is required"
-    echo "Usage: $0 <environment>"
-    echo "Example: $0 dev"
-    echo "Available environments: dev, test, prod"
-    exit 1
-fi
-
-ENVIRONMENT=$1
-PROJECT_NAME=${2:-twin}
-
-echo "🗑️ Preparing to destroy ${PROJECT_NAME}-${ENVIRONMENT} infrastructure..."
-
-# Navigate to terraform directory
-cd "$(dirname "$0")/../terraform"
-
-# Check if workspace exists
-if ! terraform workspace list | grep -q "$ENVIRONMENT"; then
-    echo "❌ Error: Workspace '$ENVIRONMENT' does not exist"
-    echo "Available workspaces:"
-    terraform workspace list
-    exit 1
-fi
-
-# Select the workspace
-terraform workspace select "$ENVIRONMENT"
-
-echo "📦 Emptying S3 buckets..."
-
-# Get AWS Account ID for bucket names
-AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-
-# Get bucket names with account ID
-FRONTEND_BUCKET="${PROJECT_NAME}-${ENVIRONMENT}-frontend-${AWS_ACCOUNT_ID}"
-MEMORY_BUCKET="${PROJECT_NAME}-${ENVIRONMENT}-memory-${AWS_ACCOUNT_ID}"
-
-# Empty frontend bucket if it exists
-if aws s3 ls "s3://$FRONTEND_BUCKET" 2>/dev/null; then
-    echo "  Emptying $FRONTEND_BUCKET..."
-    aws s3 rm "s3://$FRONTEND_BUCKET" --recursive
-else
-    echo "  Frontend bucket not found or already empty"
-fi
-
-# Empty memory bucket if it exists
-if aws s3 ls "s3://$MEMORY_BUCKET" 2>/dev/null; then
-    echo "  Emptying $MEMORY_BUCKET..."
-    aws s3 rm "s3://$MEMORY_BUCKET" --recursive
-else
-    echo "  Memory bucket not found or already empty"
-fi
-
-echo "🔥 Running terraform destroy..."
-
-# Run terraform destroy with auto-approve
-if [ "$ENVIRONMENT" = "prod" ] && [ -f "prod.tfvars" ]; then
-    terraform destroy -var-file=prod.tfvars -var="project_name=$PROJECT_NAME" -var="environment=$ENVIRONMENT" -auto-approve
-else
-    terraform destroy -var="project_name=$PROJECT_NAME" -var="environment=$ENVIRONMENT" -auto-approve
-fi
-
-echo "✅ Infrastructure for ${ENVIRONMENT} has been destroyed!"
-echo ""
-echo "💡 To remove the workspace completely, run:"
-echo "   terraform workspace select default"
-echo "   terraform workspace delete $ENVIRONMENT"
+cd backend
+pip install -r requirements.txt
+uvicorn server:app --reload
 ```
 
-Mac/Linux users make it executable:
+Frontend:
 
 ```bash
-chmod +x scripts/destroy.sh
+cd frontend
+npm install
+npm run dev
 ```
 
-### Step 2: Create Destroy Script for Windows
+Lambda packaging (used by deploy scripts):
 
-You added `scripts/destroy.ps1`:
-
-```powershell
-param(
-    [Parameter(Mandatory=$true)]
-    [string]$Environment,
-    [string]$ProjectName = "twin"
-)
-
-# Validate environment parameter
-if ($Environment -notmatch '^(dev|test|prod)$') {
-    Write-Host "Error: Invalid environment '$Environment'" -ForegroundColor Red
-    Write-Host "Available environments: dev, test, prod" -ForegroundColor Yellow
-    exit 1
-}
-
-Write-Host "Preparing to destroy $ProjectName-$Environment infrastructure..." -ForegroundColor Yellow
-
-# Navigate to terraform directory
-Set-Location (Join-Path (Split-Path $PSScriptRoot -Parent) "terraform")
-
-# Check if workspace exists
-$workspaces = terraform workspace list
-if (-not ($workspaces | Select-String $Environment)) {
-    Write-Host "Error: Workspace '$Environment' does not exist" -ForegroundColor Red
-    Write-Host "Available workspaces:" -ForegroundColor Yellow
-    terraform workspace list
-    exit 1
-}
-
-# Select the workspace
-terraform workspace select $Environment
-
-Write-Host "Emptying S3 buckets..." -ForegroundColor Yellow
-
-# Get AWS Account ID for bucket names
-$awsAccountId = aws sts get-caller-identity --query Account --output text
-
-# Define bucket names with account ID
-$FrontendBucket = "$ProjectName-$Environment-frontend-$awsAccountId"
-$MemoryBucket = "$ProjectName-$Environment-memory-$awsAccountId"
-
-# Empty frontend bucket if it exists
-try {
-    aws s3 ls "s3://$FrontendBucket" 2>$null | Out-Null
-    Write-Host "  Emptying $FrontendBucket..." -ForegroundColor Gray
-    aws s3 rm "s3://$FrontendBucket" --recursive
-} catch {
-    Write-Host "  Frontend bucket not found or already empty" -ForegroundColor Gray
-}
-
-# Empty memory bucket if it exists
-try {
-    aws s3 ls "s3://$MemoryBucket" 2>$null | Out-Null
-    Write-Host "  Emptying $MemoryBucket..." -ForegroundColor Gray
-    aws s3 rm "s3://$MemoryBucket" --recursive
-} catch {
-    Write-Host "  Memory bucket not found or already empty" -ForegroundColor Gray
-}
-
-Write-Host "Running terraform destroy..." -ForegroundColor Yellow
-
-# Run terraform destroy with auto-approve
-if ($Environment -eq "prod" -and (Test-Path "prod.tfvars")) {
-    terraform destroy -var-file=prod.tfvars -var="project_name=$ProjectName" -var="environment=$Environment" -auto-approve
-} else {
-    terraform destroy -var="project_name=$ProjectName" -var="environment=$Environment" -auto-approve
-}
-
-Write-Host "Infrastructure for $Environment has been destroyed!" -ForegroundColor Green
-Write-Host ""
-Write-Host "  To remove the workspace completely, run:" -ForegroundColor Cyan
-Write-Host "   terraform workspace select default" -ForegroundColor White
-Write-Host "   terraform workspace delete $Environment" -ForegroundColor White
+```bash
+cd backend
+uv run deploy.py
 ```
 
-### Step 3: Using the Destroy Scripts
+## 🚀 **Deploying Environments (dev/test/prod)**
 
 Mac/Linux:
 
 ```bash
-./scripts/destroy.sh dev
-./scripts/destroy.sh test
-./scripts/destroy.sh prod
+./scripts/deploy.sh dev
 ```
 
 Windows PowerShell:
 
 ```powershell
-.\scripts\destroy.ps1 -Environment dev
-.\scripts\destroy.ps1 -Environment test
-.\scripts\destroy.ps1 -Environment prod
+.\scripts\deploy.ps1 -Environment dev
 ```
 
-### What Gets Destroyed
+The script will:
 
-The scripts will remove:
+1. Package Lambda
+2. Apply Terraform
+3. Build and upload frontend
+4. Print URLs:
 
-* Lambda functions
+   * CloudFront URL
+   * API Gateway URL
+   * Custom domain (if enabled)
+
+## 🗑️ **Destroying an Environment**
+
+Mac/Linux:
+
+```bash
+./scripts/destroy.sh dev
+```
+
+Windows:
+
+```powershell
+.\scripts\destroy.ps1 -Environment dev
+```
+
+What gets removed:
+
+* CloudFront
+* Lambda
 * API Gateway
-* CloudFront distribution
-* S3 buckets (frontend + memory)
-* IAM roles + policies
-* Route 53 DNS records (if using custom domain)
-* ACM certificates (if using custom domain)
-* Any other Terraform-managed resources
+* S3 buckets
+* IAM roles
+* Route 53 records
+* ACM certificates
 
-### Important Notes
+Everything created by Terraform is destroyed safely and cleanly.
 
-* CloudFront deletion can take **5–15 minutes**
-* Workspaces remain unless manually removed:
+## 🎉 **Project Complete**
 
-  ```bash
-  terraform workspace select default
-  terraform workspace delete dev
-  ```
-* Always destroy unused environments to minimise AWS costs
+This project transforms the previously manual Digital Twin deployment into a **fully automated, Terraform-driven, multi-environment IaC system**, giving you:
 
-## Final Result
+* Reliable reproducibility
+* One-command deployments
+* Safe environment destruction
+* Professional AWS IaC architecture
+* Full integration with your Bedrock-powered Digital Twin
 
-You now have **full lifecycle control**:
-
-* `deploy.sh` / `deploy.ps1` → Create & deploy environments
-* `destroy.sh` / `destroy.ps1` → Fully remove them
-
-This branch completes the infrastructure automation toolkit for the project.
+The Digital Twin is now backed by **end-to-end AWS automation** — ready for production, scaling, CI/CD integration, and long-term maintainability.
