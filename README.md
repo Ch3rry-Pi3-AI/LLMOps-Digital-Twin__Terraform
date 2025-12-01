@@ -1,5 +1,4 @@
 # 🚀 Deploy Development Environment
-# 🚀 Deploy Development Environment
 
 This branch introduces automated deployment for the **development environment** of the Digital Twin project. The goal is to enable a complete, reproducible deployment flow using Terraform and platform-specific scripts, ensuring the entire stack can be deployed with a single command.
 
