@@ -1,29 +1,33 @@
+Here is a clean, polished, **professional-style** branch README that matches the tone, structure, and polish of your previous branch readmes — no horizontal lines, no clutter, and fully consistent with your established documentation style.
+
+---
+
 # 🚀 Deploy Development Environment
 
-This branch introduces automated deployment for the **development environment**, using a combination of Terraform and custom deployment scripts. Once completed, your entire system (backend, frontend, infrastructure) can be deployed with a single command.
+This branch introduces automated deployment for the **development environment** of the Digital Twin project. The goal is to enable a complete, reproducible deployment flow using Terraform and platform-specific scripts, ensuring the entire stack can be deployed with a single command.
 
-## 📂 What This Stage Covers
+## Overview
 
-This branch adds:
+In this stage, you:
 
-* Terraform initialisation
-* Automated deployment scripts (`deploy.sh` and `deploy.ps1`)
-* A one-step deployment flow for the full dev environment
-* CloudFront + Lambda + API Gateway + S3 provisioning
-* Frontend build and upload automation
+* Initialise Terraform for the project
+* Use deployment scripts to package the backend, provision AWS infrastructure, build the frontend, and upload assets
+* Verify that your development environment is fully accessible through CloudFront and API Gateway
 
-## 🧩 Steps Completed in This Branch
+These steps replace manual deployment processes and form the foundation for future CI/CD automation.
 
-### **1. Initialise Terraform**
+## Steps Completed in This Branch
 
-From the project root:
+### Step 1: Initialise Terraform
+
+From the project root, open a terminal and run:
 
 ```bash
 cd terraform
 terraform init
 ```
 
-Expected console output:
+Expected output includes:
 
 ```
 Initializing the backend...
@@ -31,67 +35,49 @@ Initializing provider plugins...
 - Finding hashicorp/aws versions matching "~> 6.0"...
 - Installing hashicorp/aws v6.23.0...
 - Installed hashicorp/aws v6.23.0 (signed by HashiCorp)
-Terraform has created a lock file .terraform.lock.hcl to record the provider
-selections it made above. Include this file in your version control repository
-so that Terraform can guarantee to make the same selections by default when
-you run "terraform init" in the future.
-
+Terraform has created a lock file .terraform.lock.hcl ...
 Terraform has been successfully initialized!
-
-You may now begin working with Terraform. Try running "terraform plan" to see
-any changes that are required for your infrastructure. All Terraform commands
-should now work.
-
-If you ever set or change modules or backend configuration for Terraform,
-rerun this command to reinitialize your working directory. If you forget, other
-commands will detect it and remind you to do so if necessary.
 ```
 
-Terraform is now ready to manage infrastructure for your Digital Twin.
+Terraform is now fully initialised and ready to manage the AWS resources required for your Digital Twin.
 
-### **2. Deploy Using the Script**
+### Step 2: Deploy Using the Script
 
-You can now deploy *everything* automatically using the deployment scripts created in this branch.
+The deployment scripts automate the entire workflow: Lambda packaging, Terraform provisioning, frontend build, and S3 synchronisation.
 
-#### **Mac/Linux**
+macOS / Linux users:
 
 ```bash
 ./scripts/deploy.sh dev
 ```
 
-#### **Windows PowerShell**
+Windows PowerShell users:
 
 ```powershell
 .\scripts\deploy.ps1 -Environment dev
 ```
 
-The script performs the full pipeline:
+During execution, the script will:
 
-1. Builds and packages the Lambda function
-2. Creates or selects the correct Terraform workspace
-3. Applies the Terraform infrastructure
-4. Builds your frontend
-5. Uploads the static site to S3
-6. Prints all deployment URLs (CloudFront, API Gateway, etc.)
+1. Build the backend Lambda package
+2. Create or select the Terraform workspace (`dev`)
+3. Deploy the complete AWS infrastructure
+4. Build the frontend static export
+5. Upload the frontend to the S3 website bucket
+6. Output all relevant CloudFront and API URLs
 
-### **3. Test the Deployed Dev Environment**
+### Step 3: Test the Deployed Environment
 
-Once deployment completes:
+Once deployment completes successfully:
 
-1. Open the **CloudFront URL** displayed in the script’s output
-2. Confirm the frontend loads correctly
-3. Test the chat functionality to verify end-to-end behaviour
+1. Open the **CloudFront URL** printed in the terminal
+2. Confirm that the frontend loads
+3. Send a message through the chat interface to verify backend integration
 
-If everything works, your **development environment is now fully operational**, deployed entirely through automated scripts.
+Your Digital Twin should now be fully operational in the **development environment**, deployed entirely via the new automated workflow.
 
-## ✅ Branch Summary
+## Summary
 
-This branch establishes the foundation for repeatable, automated deployments. From now on, bringing up or updating the dev environment is as simple as running:
+This branch establishes a unified, automated deployment flow across macOS, Linux, and Windows. With the deployment scripts and Terraform configuration now in place, you can deploy or update the entire environment reliably with a single command.
 
-```bash
-./scripts/deploy.sh dev
-```
-
-(or the PowerShell equivalent on Windows)
-
-This ensures consistent deployments and prepares you for the CI/CD automation in upcoming branches.
+The project is now ready for the next phase: extending this automation into full CI/CD.
