@@ -215,8 +215,6 @@ What gets removed:
 
 Everything created by Terraform is destroyed safely and cleanly.
 
-## 🎉 **Project Complete**
-
 This project transforms the previously manual Digital Twin deployment into a **fully automated, Terraform-driven, multi-environment IaC system**, giving you:
 
 * Reliable reproducibility
